@@ -20,6 +20,7 @@ Usage::
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import textwrap
@@ -35,6 +36,7 @@ class Chunk:
     source: str = ""
     chunk_id: int = 0
     embedding: Optional[list[float]] = field(default=None, repr=False)
+    content_hash: str = field(default="", repr=False)
 
 
 class RAGPipeline:
@@ -78,30 +80,69 @@ class RAGPipeline:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    def add_text(self, text: str, source: str = "inline") -> int:
+    def add_text(
+        self, text: str, source: str = "inline", deduplicate: bool = True
+    ) -> int:
         """
         Chunk, embed, and store a raw text string.
 
+        Args:
+            text: The raw text to add.
+            source: Label identifying where this text came from.
+            deduplicate: If True (default), skip chunks whose content
+                already exists in the store. Prevents duplicate retrieval
+                results and inflated chunk counts.
+
         Returns:
-            Number of chunks added.
+            Number of *new* chunks added (excludes duplicates).
         """
         chunks = self._chunk_text(text, source)
-        embeddings = self._embed_texts([c.text for c in chunks])
-        for chunk, emb in zip(chunks, embeddings):
-            chunk.embedding = emb
-        self._chunks.extend(chunks)
-        return len(chunks)
 
-    def add_document(self, path: str, encoding: str = "utf-8") -> int:
+        # Compute content hashes and filter duplicates
+        for chunk in chunks:
+            chunk.content_hash = self._hash_text(chunk.text)
+
+        if deduplicate:
+            existing_hashes = {c.content_hash for c in self._chunks if c.content_hash}
+            new_chunks = [c for c in chunks if c.content_hash not in existing_hashes]
+        else:
+            new_chunks = chunks
+
+        if not new_chunks:
+            return 0
+
+        embeddings = self._embed_texts([c.text for c in new_chunks])
+        for chunk, emb in zip(new_chunks, embeddings):
+            chunk.embedding = emb
+        self._chunks.extend(new_chunks)
+        return len(new_chunks)
+
+    def add_document(
+        self, path: str, encoding: str = "utf-8", deduplicate: bool = True
+    ) -> int:
         """
         Load a file, chunk it, embed it, and store it.
 
         Returns:
-            Number of chunks added.
+            Number of new chunks added (excludes duplicates).
         """
         p = Path(path)
         text = p.read_text(encoding=encoding)
-        return self.add_text(text, source=p.name)
+        return self.add_text(text, source=p.name, deduplicate=deduplicate)
+
+    def remove_source(self, source: str) -> int:
+        """
+        Remove all chunks from a specific source.
+
+        Useful for re-adding updated documents without duplicates.
+
+        Returns:
+            Number of chunks removed.
+        """
+        before = len(self._chunks)
+        self._chunks = [c for c in self._chunks if c.source != source]
+        removed = before - len(self._chunks)
+        return removed
 
     def retrieve(self, query: str, top_k: Optional[int] = None) -> list[Chunk]:
         """
@@ -188,6 +229,15 @@ class RAGPipeline:
     def sources(self) -> list[str]:
         """List of unique source names in the knowledge base."""
         return list(dict.fromkeys(c.source for c in self._chunks))
+
+    # ── Hashing ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _hash_text(text: str) -> str:
+        """SHA-256 hash of normalized text for deduplication."""
+        # Normalize whitespace so trivially different chunks match
+        normalized = " ".join(text.split())
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
 
     # ── Chunking ──────────────────────────────────────────────────────────────
 
