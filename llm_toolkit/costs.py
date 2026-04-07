@@ -43,6 +43,12 @@ PRICING: dict[str, ModelPricing] = {
     "text-embedding-ada-002": ModelPricing(input=0.10, output=0.0, provider="openai"),
 
     # ── Anthropic ─────────────────────────────────────────────────────────────
+    # Claude 4 (2025–2026)
+    "claude-sonnet-4-5": ModelPricing(input=3.00, output=15.00, provider="anthropic"),
+    "claude-sonnet-4": ModelPricing(input=3.00, output=15.00, provider="anthropic"),
+    "claude-haiku-4": ModelPricing(input=0.80, output=4.00, provider="anthropic"),
+    "claude-opus-4": ModelPricing(input=15.00, output=75.00, provider="anthropic"),
+    # Claude 3.5
     "claude-3-5-sonnet-20241022": ModelPricing(input=3.00, output=15.00, provider="anthropic"),
     "claude-3-5-haiku-20241022": ModelPricing(input=0.80, output=4.00, provider="anthropic"),
     "claude-3-opus-20240229": ModelPricing(input=15.00, output=75.00, provider="anthropic"),
