@@ -164,6 +164,74 @@ def compare_costs(
     return results
 
 
+def batch_estimate(
+    calls: list[dict],
+    default_model: str = "gpt-4o",
+) -> dict:
+    """
+    Estimate total cost for a batch of LLM calls.
+
+    Useful for budgeting batch processing, evaluations, or pipeline runs
+    before committing API spend.
+
+    Args:
+        calls: List of dicts, each with optional keys:
+               - model (str): model name, falls back to default_model
+               - input_tokens (int): prompt token count
+               - output_tokens (int): completion token count (default 0)
+        default_model: Model to use when a call doesn't specify one.
+
+    Returns:
+        Dict with total_cost, call_count, per_model breakdown, and
+        individual call costs.
+
+    Example::
+
+        costs = batch_estimate([
+            {"model": "gpt-4o", "input_tokens": 2000, "output_tokens": 500},
+            {"model": "gpt-4o", "input_tokens": 1500, "output_tokens": 300},
+            {"model": "claude-3-5-sonnet", "input_tokens": 3000, "output_tokens": 800},
+        ])
+        print(f"Total: {format_cost(costs['total_cost'])}")
+        # → Total: $0.0372
+    """
+    results = []
+    per_model: dict[str, dict] = {}
+    total = 0.0
+
+    for call in calls:
+        model = call.get("model", default_model)
+        inp = call.get("input_tokens", 0)
+        out = call.get("output_tokens", 0)
+        est = estimate_cost(model, inp, out)
+        results.append(est)
+        total += est["total_cost"]
+
+        if model not in per_model:
+            per_model[model] = {
+                "calls": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_cost": 0.0,
+            }
+        per_model[model]["calls"] += 1
+        per_model[model]["input_tokens"] += inp
+        per_model[model]["output_tokens"] += out
+        per_model[model]["total_cost"] += est["total_cost"]
+
+    # Round the per-model totals
+    for stats in per_model.values():
+        stats["total_cost"] = round(stats["total_cost"], 8)
+
+    return {
+        "call_count": len(calls),
+        "total_cost": round(total, 8),
+        "currency": "USD",
+        "per_model": per_model,
+        "calls": results,
+    }
+
+
 def format_cost(cost: float, precision: int = 6) -> str:
     """Format a dollar cost for display."""
     if cost < 0.000001:
