@@ -12,8 +12,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# ── Pricing per 1M tokens (as of 2025) ──────────────────────────────────────
+# ── Pricing per 1M tokens (as of April 2026) ────────────────────────────────
 # Format: (input_cost_per_1M, output_cost_per_1M)
+# Keep in sync with costs.py for the full provider-aware pricing table.
 PRICING: dict[str, tuple[float, float]] = {
     # OpenAI
     "gpt-4o": (2.50, 10.00),
@@ -22,9 +23,15 @@ PRICING: dict[str, tuple[float, float]] = {
     "gpt-4": (30.00, 60.00),
     "gpt-3.5-turbo": (0.50, 1.50),
     "o1": (15.00, 60.00),
-    "o1-mini": (3.00, 12.00),
+    "o1-mini": (1.10, 4.40),
+    "o3": (10.00, 40.00),
     "o3-mini": (1.10, 4.40),
+    "o4-mini": (1.10, 4.40),
     # Anthropic
+    "claude-opus-4": (15.00, 75.00),
+    "claude-sonnet-4": (3.00, 15.00),
+    "claude-sonnet-4-5": (3.00, 15.00),
+    "claude-haiku-4": (0.80, 4.00),
     "claude-opus-4-20250514": (15.00, 75.00),
     "claude-sonnet-4-20250514": (3.00, 15.00),
     "claude-3-5-haiku-20241022": (0.80, 4.00),
@@ -34,6 +41,9 @@ PRICING: dict[str, tuple[float, float]] = {
     "claude-opus": (15.00, 75.00),
     "claude-sonnet": (3.00, 15.00),
     "claude-haiku": (0.80, 4.00),
+    # Google
+    "gemini-2.5-pro": (1.25, 10.00),
+    "gemini-2.0-flash": (0.10, 0.40),
 }
 
 # ── Tiktoken encoding mappings ───────────────────────────────────────────────
@@ -45,7 +55,9 @@ _ENCODINGS: dict[str, str] = {
     "gpt-3.5-turbo": "cl100k_base",
     "o1": "o200k_base",
     "o1-mini": "o200k_base",
+    "o3": "o200k_base",
     "o3-mini": "o200k_base",
+    "o4-mini": "o200k_base",
 }
 
 
