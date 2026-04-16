@@ -31,6 +31,7 @@ PRICING: dict[str, tuple[float, float]] = {
     "claude-opus-4": (15.00, 75.00),
     "claude-sonnet-4": (3.00, 15.00),
     "claude-sonnet-4-5": (3.00, 15.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
     "claude-haiku-4": (0.80, 4.00),
     "claude-opus-4-20250514": (15.00, 75.00),
     "claude-sonnet-4-20250514": (3.00, 15.00),
@@ -127,6 +128,43 @@ def estimate_cost(
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
     }
+
+
+def budget_guard(
+    input_tokens: int,
+    output_tokens: int,
+    model: str = "gpt-4o",
+    max_cost: float = 0.10,
+) -> None:
+    """Raise an error if the estimated call cost exceeds a budget threshold.
+
+    Useful as a cheap safety net before issuing expensive API calls —
+    especially helpful in loops, batch jobs, or any context where token
+    counts could unexpectedly balloon.
+
+    Args:
+        input_tokens: Estimated input (prompt) token count.
+        output_tokens: Estimated output (completion) token count.
+        model: Model name used for pricing lookup.
+        max_cost: Maximum allowed cost in USD. Defaults to $0.10.
+
+    Raises:
+        ValueError: If the estimated cost exceeds ``max_cost``.
+
+    Example::
+
+        tokens_in = count_tokens(my_big_prompt, model="gpt-4o")
+        budget_guard(tokens_in, output_tokens=2000, model="gpt-4o", max_cost=0.05)
+        # Only reaches here if estimated cost <= $0.05
+        response = client.chat.completions.create(...)
+    """
+    result = estimate_cost(input_tokens, output_tokens, model)
+    if result["total_cost"] > max_cost:
+        raise ValueError(
+            f"Estimated cost ${result['total_cost']:.6f} exceeds budget "
+            f"${max_cost:.6f} for {model} "
+            f"({input_tokens} in / {output_tokens} out tokens)"
+        )
 
 
 def truncate_to_tokens(

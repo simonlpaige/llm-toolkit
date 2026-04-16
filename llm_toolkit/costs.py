@@ -44,6 +44,7 @@ PRICING: dict[str, ModelPricing] = {
 
     # ── Anthropic ─────────────────────────────────────────────────────────────
     # Claude 4 (2025–2026)
+    "claude-sonnet-4-6": ModelPricing(input=3.00, output=15.00, provider="anthropic"),
     "claude-sonnet-4-5": ModelPricing(input=3.00, output=15.00, provider="anthropic"),
     "claude-sonnet-4": ModelPricing(input=3.00, output=15.00, provider="anthropic"),
     "claude-haiku-4": ModelPricing(input=0.80, output=4.00, provider="anthropic"),
